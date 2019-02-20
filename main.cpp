@@ -4,120 +4,9 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
+#include <stdio.h>
+#include <string.h>
 #include <zconf.h>
-#include "boost/program_options.hpp"
-#include <boost/program_options/detail/config_file.hpp>
-
-/*
-bool ParseOptions(
-        //![in] Number of arguments in argv
-        int argc,
-        //![in] Command line arguments
-        const char **argv,
-        //![out] Variables map populated with the values parsed from the command line
-        po::variables_map &vm)
-{
-    po::options_description all_options, common_options("Common options"), google_options("Google options"), microsoft_options("Microsoft options"), config_options("Manual configuration options (required when INI file is absent, ignored when INI file is present)");
-
-    // options that should be mentioned to the user in --help go here
-    all_options.add_options()
-            ("help,h","Print usage instructions");
-
-    common_options.add_options()
-            ("target,t",po::value<std::string>(),"Full path and filename of a file containing target (typically self-signed) certificate containing notionally attested key")
-            ("ini,i",po::value<std::string>(),"Full path and filename of a Purebred INI file containing configuration info (when absent manual configuration options are required)")
-            ("logging,l",po::value<std::string>(),"Logging configuration for GAT");
-
-    google_options.add_options()
-            ("attestationFolder,a",po::value<std::string>(),"Full path of folder containing attestation certificate chain to process")
-            ("attestationP7",po::value<std::string>(),"Full path of file containing certs-only P7 with attestation certificate chain to process")
-            ("scepGoogle",po::value<std::string>(),"Full path and filename of a file containing SCEP request with attestation from a Pixel 2");
-
-    microsoft_options.add_options()
-            ("csr,c",po::value<std::string>(),"Full path and filename of a file containing CSR with attestation from a Surface Pro")
-            ("scepMicrosoft",po::value<std::string>(),"Full path and filename of a file containing SCEP request with attestation from a Surface Pro")
-            ("p8",po::value<std::string>(),"Full path and filename of a file containing PKCS8 blob for use in decrypting extension from CSR with attestation from a Surface Pro")
-            ("p8Cert",po::value<std::string>(),"Full path and filename of a file containing certificate corresponding to PKCS8 blob for use in decrypting extension from CSR with attestation from a Surface Pro");
-
-
-    config_options.add_options()
-            ("settingsDatabase,s",po::value<std::string>(),"Full path and filename of file of existing settings database")
-            ("logDatabase,x",po::value<std::string>(),"Log database")
-            ("certs,y",po::value<std::string>(),"Full path of folder containing intermediate CA certificates to use")
-            ("crls,z",po::value<std::string>(),"Full path of folder containing CRLs to use")
-            ("taPath",po::value<std::string>(),"Parent folder of .tas files (used if .sdb references an invalid path)")
-            ;
-
-    all_options.add(common_options).add(google_options).add(microsoft_options).add(config_options);
-
-    try
-    {
-        // parse the args and throw the leftovers into input-file
-        po::store(po::command_line_parser(argc, argv).options(all_options).run(), vm);
-        po::notify(vm);
-    }
-    catch(std::exception &e)
-    {
-        throw e;
-    }
-
-    if(vm.count("help"))
-    {
-        ShowUsage(all_options);
-        if(2 == argc)
-            return false;
-    }
-
-    if(vm.empty() || 1 == argc)
-    {
-        ShowUsage(all_options);
-        return false;
-    }
-
-    return true;
-}*/
-namespace po = boost::program_options;
-
-void ShowUsage(po::options_description& options) {
-    std::cout << "xkcdpwgen usage" << std::endl << options << std::endl;
-}
-
-bool ParseOptions(int argc, const char **argv, po::variables_map &vm) {
-    po::options_description all_options;
-
-    all_options.add_options()
-            ("help,h","Print usage instructions")
-            ("words,w",po::value<std::string>(),"Number of words in password (default=4)")
-            ("symbols,s",po::value<std::string>(),"Number of symbols in password (default=0)")
-            ("nums,n",po::value<std::string>(),"Number of numbers in password (default=0)")
-            ("caps,c",po::value<std::string>(),"Number of capital letters in password (default=0)");
-
-    try
-    {
-        // parse the args and throw the leftovers into input-file
-        po::store(po::command_line_parser(argc, argv).options(all_options).run(), vm);
-        po::notify(vm);
-    }
-    catch(std::exception &e)
-    {
-        throw e;
-    }
-    if(vm.count("help"))
-    {
-        ShowUsage(all_options);
-        if(2 == argc)
-            return false;
-    }
-
-    if(vm.empty() || 1 == argc)
-    {
-        ShowUsage(all_options);
-        return false;
-    }
-
-    return true;
-}
-
 
 long getNumOfWords(sqlite3 *db) {
     long out = -1;
@@ -161,7 +50,7 @@ int main(int argc, char *argv[]) {
     sqlite3 *db = nullptr;
     sqlite3_stmt* stmt = nullptr;
     std::vector <std::string> arr = {};
-    std::vector <std::string> symbols = {"!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "+", "~", "?", "=", "-"};
+    std::vector <std::string> symbols = {"!", "@", "#", "$", "%", "^", "&", "*", "~", ".", ":", ";"};
 
     //TODO - make a separate test project and play with Boost program_options
     if (argc > 1) {
@@ -315,9 +204,10 @@ int main(int argc, char *argv[]) {
 
     srandom((unsigned int)time(nullptr));
     for (int i = 1; i <= words; i++) {
-        char buffer[MAX_INPUT];
+        std::string answer;
+        char buffer[answer.max_size()];
         getcwd(buffer, sizeof(buffer));
-        std::string answer = SplitFilename(buffer);
+        answer = SplitFilename(buffer);
         answer.append("/Dictionary.db");
         if (sqlite3_open(answer.c_str(), &db) != SQLITE_OK) {
             printf("ERROR opening SQLite DB in memory: %s\n", sqlite3_errmsg(db));
